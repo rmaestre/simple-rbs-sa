@@ -2,7 +2,18 @@ A simple Rule based system to a sentiment analysis
 =============================
 
 This rule based system provides a simple BNF grammar to parse sentiment analysis rules.
+When match succes, no more rules are checked.
 
+The simple BNF Grammar:
+```
+rule : BEGINRULE expression THEN SCORE ENDRULE
+expression : QUALIFICATOR ENTITY
+expression : ENTITY QUALIFICATOR
+expression : SWAP QUALIFICATOR ENTITY
+expression : ENTITY SWAP QUALIFICATOR
+```
+
+A simple execution of the whole system, loading dicts and rules, parsing the rules and checking the kb.
 ```
 host$ python sa_grammar.py 
 Loading dicts:
