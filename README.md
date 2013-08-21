@@ -1,4 +1,4 @@
-simple-rbs-sa
-=============
+sa-bnf-parser-and-interpreter
+=============================
 
-simple rule based system for a sentiment analysis
+Sentiment analysis parser and interpreter
