@@ -31,36 +31,29 @@ Loading RULES:
 	Rule parsed succesfully: #7 - ENTITY > -0.3 ;
 	Rule parsed succesfully: #8 ENTITY - > -0.3 ;
 
-Analizing 6 chunks
-	Chunk "movistar no funciona muy bien pero nada bien"
-	Rule triggered:#2
-	Score: -0.3
-	Match: [('movistar', 'no', 'bien')]
 
+Response:
+{
+	matches: {
+		0: {
+			rule_triggered: "#6",
+			score: 0.3,
+			match: "movistar yo.None gustar.verb"
+		},
+		1: {
+			rule_triggered: "#8",
+			score: -0.3,
+			match: "orange que.None ser.None lento.adj"
+		},
+		2: {
+			rule_triggered: "#7",
+			score: -0.3,
+			match: "lento.adj vodafone"
+		}
+	},
+	text: "movistar yo.None gustar.verb bastante.adv #.None no decir.verb el.None mismo.adj para.None orange que.None ser.None lento.adj #.None lento.adj vodafone ",
+	raw_text: "movistar me gusta bastante, no digo lo mismo para orange que es lento, lento vodafone",
+	elipsed_time: 0.09892916679382324
+}
 
-	Chunk " pero vodafone es muy buena"
-	Rule triggered:#6
-	Score: 0.3
-	Match: [('vodafone', 'buena')]
-
-
-	Chunk " orange no es muy buena"
-	Rule triggered:#2
-	Score: -0.3
-	Match: [('orange', 'no', 'buena')]
-
-
-	Chunk "algunas veces vodafone no me gusta nada"
-	Rule triggered:#2
-	Score: -0.3
-	Match: [('vodafone', 'no', 'gusta')]
-
-
-	Chunk " por otro lado"
-
-
-	Chunk " otras veces vodafone si me gusta"
-	Rule triggered:#6
-	Score: 0.3
-	Match: [('vodafone', 'gusta')]
 ```
