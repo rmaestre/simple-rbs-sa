@@ -6,3 +6,6 @@
 #6 ENTITY + > 0.3 ;
 #7 - ENTITY > -0.3 ;
 #8 ENTITY - > -0.3 ;
+#9 ENTITY penoso.adj > -0.4;
+#10 ENTITY competitivo.adj > 0.4;
+#11 lento.adj ENTITY > -0.4;

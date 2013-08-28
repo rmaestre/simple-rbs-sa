@@ -10,7 +10,8 @@ tokens = (
     'MULTIPLIER',
     'THEN',
     'BEGINRULE',
-    'ENDRULE'
+    'ENDRULE',
+    'IDENTIFICATOR'
 )
 
 # Regular expression rules for simple tokens
@@ -20,6 +21,7 @@ t_QUALIFICATOR = r'\+|\-'
 t_ENDRULE = r'\;'
 t_BEGINRULE = r'\#\d+'
 t_SWAP = r'NOT'
+t_IDENTIFICATOR = r'\w+\.\w+'
 
 # A regular expression rules with some action code
 def t_SPACES(t):
@@ -48,12 +50,11 @@ def t_error(t):
 # Build the lexer
 lexer = lex.lex()
 
+
 """
 # Test it out
 data = '''
-#1 POSITIVE {2} ENTITY > -0.3;
-#25 NEGATIVE POSITIVE {3} ENTITY > 0.3;
-END
+#1 ENTITY @pesima.adj > -0.3;
 '''
 
 # Give the lexer some input
@@ -65,3 +66,4 @@ while True:
     if not tok: break      # No more input
     print tok
 """
+

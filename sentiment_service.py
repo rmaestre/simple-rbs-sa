@@ -66,6 +66,7 @@ class MainHandler(tornado.web.RequestHandler):
         response["matches"] = {}
 
         for chunk in chunks:
+
             # Apply rules and replace matchs
             rule_triggered = False
             while True:
@@ -116,33 +117,45 @@ def p_expresion_simple_one(p):
     'expression : QUALIFICATOR ENTITY'
     global regex
     if p[1] == "+":
-        regex = re.compile("%s(?:\W+\w+){0,4}?\W+%s" % (combined_positives, combined_entities))
+        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_positives, combined_entities))
     else:
-        regex = re.compile("%s(?:\W+\w+){0,4}?\W+%s" % (combined_negatives, combined_entities))
+        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_negatives, combined_entities))
 
 def p_expresion_simple_two(p):
     'expression : ENTITY QUALIFICATOR'
     global regex
     if p[2] == "+":
-        regex = re.compile("%s(?:\W+\w+){0,4}?\W+%s" % (combined_entities, combined_positives))
+        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_entities, combined_positives))
     else:
-        regex = re.compile("%s(?:\W+\w+){0,4}?\W+%s" % (combined_entities, combined_negatives))
+        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_entities, combined_negatives))
 
 def p_expresion_simple_swaping_one(p):
     'expression : SWAP QUALIFICATOR ENTITY'
     global regex
     if p[2] == "+":
-         regex = re.compile("%s(?:\W+\w+){0,3}?\W+%s(?:\W+\w+){0,3}?\W+%s" % (combined_swaps, combined_positives, combined_entities))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_swaps, combined_positives, combined_entities))
     else:
-         regex = re.compile("%s(?:\W+\w+){0,3}?\W+%s(?:\W+\w+){0,3}?\W+%s" % (combined_swaps, combined_negatives, combined_entities))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_swaps, combined_negatives, combined_entities))
 
 def p_expresion_simple_swaping_two(p):
     'expression : ENTITY SWAP QUALIFICATOR'
     global regex
     if p[3] == "+":
-         regex = re.compile("%s(?:\W+\w+){0,3}?\W+%s(?:\W+\w+){0,3}?\W+%s" % (combined_entities, combined_swaps, combined_positives))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_swaps, combined_positives))
     else:
-         regex = re.compile("%s(?:\W+\w+){0,3}?\W+%s(?:\W+\w+){0,3}?\W+%s" % (combined_entities, combined_swaps, combined_negatives))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_swaps, combined_negatives))
+
+def p_expresion_adhoc_one(p):
+    'expression : ENTITY IDENTIFICATOR'
+    global regex
+    regex = re.compile("%s(\s\S+){0,3}\s(%s)" % (combined_entities, p[2]))
+
+def p_expresion_adhoc_two(p):
+    'expression : IDENTIFICATOR ENTITY'
+    global regex
+    regex = re.compile("%s(\s\S+){0,3}\s(%s)" % (p[1], combined_entities))
+
+
 
 # Error rule for syntax errors
 def p_error(p):
