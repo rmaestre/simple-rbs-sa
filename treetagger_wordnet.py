@@ -56,8 +56,8 @@ class TreetaggerToWordnet():
                            "V": "verb"}
         self.ca_mapping = {}
         self.mapping = {
-            "es": self.es_mapping,
-            "en": self.en_mapping,
+            "spanish": self.es_mapping,
+            "english": self.en_mapping,
             "pt": self.pt_mapping,
             "ca": self.ca_mapping
         }

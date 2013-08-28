@@ -3,10 +3,11 @@
 import tornado.ioloop
 import tornado.web
 import sys
+import getopt
 import time
+import re
 import ply.yacc as yacc
 from sa_lex import tokens
-import re
 from treetagger import TreeTagger
 from treetagger_wordnet import TreetaggerToWordnet
 
@@ -14,11 +15,12 @@ from treetagger_wordnet import TreetaggerToWordnet
 class MainHandler(tornado.web.RequestHandler):
     """ """
     
-    def initialize(self, rules, chunks):
+    def initialize(self, rules, chunks, language):
         """ """
         self.rules = rules
         self.chunks = chunks
-        self.tt = TreeTagger(encoding='latin-1', language='spanish')
+        self.language = language
+        self.tt = TreeTagger(encoding='latin-1', language=language)
         self.to_wordnet = TreetaggerToWordnet()
 
     def get(self):
@@ -44,7 +46,7 @@ class MainHandler(tornado.web.RequestHandler):
             lemma = tag[2]
             if lemma == u"<unknown>":
                 lemma = tag[0]
-            aux += "%s.%s " % (lemma, self.to_wordnet.wordnet_morph_category('es', tag[1]))
+            aux += "%s.%s " % (lemma, self.to_wordnet.wordnet_morph_category(self.language, tag[1]))
         text = aux
 
         # Replace postagging for the entities
@@ -52,7 +54,7 @@ class MainHandler(tornado.web.RequestHandler):
         chunks = text.split(" ")
         for chunk in chunks:
             sub_chunks = chunk.split(".")
-            if sub_chunks[0] in entities or sub_chunks[0]  in swaps:
+            if sub_chunks[0] in entities or sub_chunks[0]  in inverters:
                 aux += "%s " % sub_chunks[0]
             else:
                 aux += "%s " % chunk
@@ -133,17 +135,17 @@ def p_expresion_simple_swaping_one(p):
     'expression : SWAP QUALIFICATOR ENTITY'
     global regex
     if p[2] == "+":
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_swaps, combined_positives, combined_entities))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_inverters, combined_positives, combined_entities))
     else:
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_swaps, combined_negatives, combined_entities))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_inverters, combined_negatives, combined_entities))
 
 def p_expresion_simple_swaping_two(p):
     'expression : ENTITY SWAP QUALIFICATOR'
     global regex
     if p[3] == "+":
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_swaps, combined_positives))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_inverters, combined_positives))
     else:
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_swaps, combined_negatives))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_inverters, combined_negatives))
 
 def p_expresion_adhoc_one(p):
     'expression : ENTITY IDENTIFICATOR'
@@ -175,13 +177,25 @@ def load_dict(file):
 
 
 
-# Check if server por is valid
-port = -1
-if len(sys.argv) == 2:
-    port = int(sys.argv[1])
-else:
-    print("Port hould be specified")
+# Check if parameters are valid
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "l:p:", ["language=","port="])
+    assert(len(opts) == 2)
+except:
+    print 'sentiment_Service.py -l <language> -p <port>'
     sys.exit()
+
+
+for o, a in opts:
+    if o == "-l":
+        language = a
+        if language not in ["spanish", "english"]:
+            print 'Valid languages: spanish, english'
+            sys.exit()
+    elif o == "-p":
+        port = a
+    else:
+        pass
 
 
 
@@ -199,9 +213,9 @@ entities = load_dict("dict/entities.tsv")
 combined_entities = "(%s)" % "|".join(entities)
 print("\t%s entities terms loaded" % len(entities))
 
-swaps = load_dict("dict/swaps.tsv")
-combined_swaps = "(%s)" % "|".join(swaps)
-print("\t%s swaps terms loaded" % len(combined_swaps))
+inverters = load_dict("dict/inverters.tsv")
+combined_inverters = "(%s)" % "|".join(inverters)
+print("\t%s inverters terms loaded" % len(inverters))
 
 chunks = load_dict("dict/chunks.tsv")
 print("\t%s chunks loaded" % len(chunks))
@@ -214,7 +228,7 @@ for line in open("dict/rules.tsv", "r"):
 
 # Build the parser, and parse rules
 parser = yacc.yacc()
-print ("\nLoading RULES:")
+print ("\nLoading rules:")
 for rule in rules:
     result = parser.parse(rule)
     print("\tRule parsed succesfully: %s" % rule) 
@@ -223,9 +237,9 @@ for rule in rules:
 
 # Init Tornado web server
 application = tornado.web.Application([
-    (r"/", MainHandler, dict(rules = compiled_rules, chunks = chunks)),
+    (r"/", MainHandler, dict(rules = compiled_rules, chunks = chunks, language = language)),
 ])
 
 # Listen on specific port and start server
-application.listen(8080)
+application.listen(port)
 tornado.ioloop.IOLoop.instance().start()
