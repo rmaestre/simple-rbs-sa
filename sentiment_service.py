@@ -175,6 +175,7 @@ def load_dict(file):
     aux = []
     for line in open(file, "r"):
         line = line.replace("\r\n", "")
+        line = line.replace("\n", "")
         aux.append(line)
     return aux
 
