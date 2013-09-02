@@ -82,7 +82,7 @@ class MainHandler(tornado.web.RequestHandler):
                         response["matches"][triggered_rule_cont]["rule_triggered"] = rule
                         response["matches"][triggered_rule_cont]["score"] = compiled_rules[rule]["score"]
                         response["matches"][triggered_rule_cont]["match"] = match.group()
-                        
+
                         # Replace chunk with "***"" filling
                         aux = ""
                         for e in match.group().split(" "):
@@ -114,6 +114,8 @@ def p_rule(p):
     compiled_rules[p[1]] = {}
     compiled_rules[p[1]]["regex"] = regex
     compiled_rules[p[1]]["score"] = float(p[4])
+    print(regex.pattern)
+
 
 def p_expresion_simple_one(p):
     'expression : QUALIFICATOR ENTITY'
@@ -126,6 +128,7 @@ def p_expresion_simple_one(p):
 def p_expresion_simple_two(p):
     'expression : ENTITY QUALIFICATOR'
     global regex
+    print(combined_entities)
     if p[2] == "+":
         regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_entities, combined_positives))
     else:
@@ -171,7 +174,7 @@ def load_dict(file):
     """
     aux = []
     for line in open(file, "r"):
-        line = line.replace("\n", "")
+        line = line.replace("\r\n", "")
         aux.append(line)
     return aux
 
@@ -213,6 +216,7 @@ entities = load_dict("dict/entities.tsv")
 combined_entities = "(%s)" % "|".join(entities)
 print("\t%s entities terms loaded" % len(entities))
 
+
 inverters = load_dict("dict/inverters.tsv")
 combined_inverters = "(%s)" % "|".join(inverters)
 print("\t%s inverters terms loaded" % len(inverters))
@@ -224,6 +228,7 @@ print("\t%s chunks loaded" % len(chunks))
 rules = []
 for line in open("dict/rules.tsv", "r"):
         line = line.replace("\n", "")
+        line = line.replace("\r", "")
         rules.append(line)
 
 # Build the parser, and parse rules
