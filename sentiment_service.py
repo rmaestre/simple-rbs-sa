@@ -10,11 +10,11 @@ import ply.yacc as yacc
 from sa_lex import tokens
 from treetagger import TreeTagger
 from treetagger_wordnet import TreetaggerToWordnet
-
+from sentiwordnet_treetagger import SentiwordnetToTreetagger
 
 class MainHandler(tornado.web.RequestHandler):
     """ """
-    
+
     def initialize(self, rules, chunks, language):
         """ """
         self.rules = rules
@@ -22,6 +22,7 @@ class MainHandler(tornado.web.RequestHandler):
         self.language = language
         self.tt = TreeTagger(encoding='latin-1', language=language)
         self.to_wordnet = TreetaggerToWordnet()
+        self.to_sentiwordnet = SentiwordnetToTreetagger()
 
     def get(self):
         """ """
@@ -59,6 +60,26 @@ class MainHandler(tornado.web.RequestHandler):
             else:
                 aux += "%s " % chunk
         text = aux
+
+        aux = ""
+        chunks = text.split(" ")
+        for chunk in chunks:
+            aux += chunk
+            sub_chunks = chunk.split(".")
+            if len(sub_chunks) > 1:
+                senti = self.to_sentiwordnet.get_sentiment(sub_chunks[0], sub_chunks[1], language)
+                positive = 0.0
+                negative = 0.0
+                if senti is not None:
+                    positive = float(senti["positive"])
+                    negative = float(senti["negative"])
+                if positive != 0:
+                    aux += "+%s" % (positive)
+                if negative != 0:
+                    aux += "-%s" % (negative)
+            aux += " "
+        text = aux
+
         response["text"] = text
 
 
@@ -114,7 +135,6 @@ def p_rule(p):
     compiled_rules[p[1]] = {}
     compiled_rules[p[1]]["regex"] = regex
     compiled_rules[p[1]]["score"] = float(p[4])
-    print(regex.pattern)
 
 
 def p_expresion_simple_one(p):
@@ -128,7 +148,6 @@ def p_expresion_simple_one(p):
 def p_expresion_simple_two(p):
     'expression : ENTITY QUALIFICATOR'
     global regex
-    print(combined_entities)
     if p[2] == "+":
         regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_entities, combined_positives))
     else:
@@ -149,6 +168,7 @@ def p_expresion_simple_swaping_two(p):
          regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_inverters, combined_positives))
     else:
          regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_inverters, combined_negatives))
+    # print(regex.pattern)
 
 def p_expresion_adhoc_one(p):
     'expression : ENTITY IDENTIFICATOR'
@@ -237,7 +257,7 @@ parser = yacc.yacc()
 print ("\nLoading rules:")
 for rule in rules:
     result = parser.parse(rule)
-    print("\tRule parsed succesfully: %s" % rule) 
+    print("\tRule parsed succesfully: %s" % rule)
 
 
 
