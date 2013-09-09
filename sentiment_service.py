@@ -11,6 +11,7 @@ from sa_lex import tokens
 from treetagger import TreeTagger
 from treetagger_wordnet import TreetaggerToWordnet
 from sentiwordnet import SentiWordnet
+import math 
 
 class MainHandler(tornado.web.RequestHandler):
     """ """
@@ -30,19 +31,19 @@ class MainHandler(tornado.web.RequestHandler):
         time_start = time.time()
         # Prepare the response DS
         response = {}
+
         # Check input text
         text = self.get_argument("text")
         text = text.replace("\n", "")
         text = text.encode("utf-8")
         response["raw_text"] = text
-        # Perform PosTaggin onto the text
-        aux = ""
 
         # Replace chunks symbols
         for chunk in self.chunks:
             text = text.replace(chunk, " # ")
 
         # Mapping treetagger postaging to wordnet postagging
+        aux = ""
         for tag in self.tt.tag(text):
             lemma = tag[2]
             if lemma == u"<unknown>":
@@ -55,8 +56,8 @@ class MainHandler(tornado.web.RequestHandler):
         chunks = text.split(" ")
         for chunk in chunks:
             sub_chunks = chunk.split(".")
-            if sub_chunks[0] in entities or sub_chunks[0]  in inverters:
-                aux += "%s " % sub_chunks[0]
+            if sub_chunks[0].lower() in entities or sub_chunks[0].lower() in inverters:
+                aux += "%s " % sub_chunks[0].lower()
             else:
                 aux += "%s " % chunk
         text = aux
@@ -79,9 +80,9 @@ class MainHandler(tornado.web.RequestHandler):
                 if senti is not None:
                     score = float(senti["positive"]) + float(senti["negative"])
                 if score < 0.0:
-                    aux += " NEGATIVE %s" % score
+                    aux += "%s" % score
                 elif score > 0.0:
-                    aux += " POSITIVE %s" % score
+                    aux += "+%s" % score
             # Return keyword
             aux += " "
         text = aux
@@ -131,24 +132,32 @@ class MainHandler(tornado.web.RequestHandler):
 start = 'rule'
 regex = ''
 compiled_rules = {}
+adhoc_sentiwords = {}
 
 def p_rule(p):
     'rule : BEGINRULE expression THEN SCORE ENDRULE'
     if p[1] in compiled_rules:
         print("Error: Rule #ID duplicated.")
         sys.exit(0)
-    compiled_rules[p[1]] = {}
-    compiled_rules[p[1]]["regex"] = regex
-    compiled_rules[p[1]]["score"] = float(p[4])
+
+    # Replace special character "#" and cast to integer
+    # This is main to sort the rules dictionary and to 
+    # apply them in order
+    rule_id = int(p[1].replace("#", ""))
+
+    # Save rule
+    compiled_rules[rule_id] = {}
+    compiled_rules[rule_id]["regex"] = regex
+    compiled_rules[rule_id]["score"] = float(p[4])
 
 
 def p_expresion_simple_one(p):
     'expression : QUALIFICATOR ENTITY'
     global regex
     if p[1] == "+":
-        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_positives, combined_entities))
+        regex = re.compile("(\w+\.\w(\%s)(\d+.\d+)+)(\s\S+){0,3}\s%s" % (combined_positives, combined_entities))
     else:
-        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_negatives, combined_entities))
+        regex = re.compile("(\w+\.\w(\%s)(\d+.\d+)+)(\s\S+){0,3}\s%s" % (combined_negatives, combined_entities))
 
 def p_expresion_simple_two(p):
     'expression : ENTITY QUALIFICATOR'
@@ -162,17 +171,17 @@ def p_expresion_simple_swaping_one(p):
     'expression : SWAP QUALIFICATOR ENTITY'
     global regex
     if p[2] == "+":
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_inverters, combined_positives, combined_entities))
+         regex = re.compile("%s(\s\S+){0,3}\s(\w+\.\w(\%s)(\d+.\d+)+)(\s\S+){0,3}\s%s" % (combined_inverters, combined_positives, combined_entities))
     else:
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_inverters, combined_negatives, combined_entities))
+         regex = re.compile("%s(\s\S+){0,3}\s(\w+\.\w(\%s)(\d+.\d+)+)(\s\S+){0,3}\s%s" % (combined_inverters, combined_negatives, combined_entities))
 
 def p_expresion_simple_swaping_two(p):
     'expression : ENTITY SWAP QUALIFICATOR'
     global regex
     if p[3] == "+":
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_inverters, combined_positives))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s(\w+\.\w(\%s)(\d+.\d+)+)" % (combined_entities, combined_inverters, combined_positives))
     else:
-         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s%s" % (combined_entities, combined_inverters, combined_negatives))
+         regex = re.compile("%s(\s\S+){0,3}\s%s(\s\S+){0,3}\s(\w+\.\w(\%s)(\d+.\d+)+)" % (combined_entities, combined_inverters, combined_negatives))
     # print(regex.pattern)
 
 def p_expresion_adhoc_one(p):
@@ -183,7 +192,7 @@ def p_expresion_adhoc_one(p):
 def p_expresion_adhoc_two(p):
     'expression : IDENTIFICATOR ENTITY'
     global regex
-    regex = re.compile("%s(\s\S+){0,3}\s(%s)" % (p[1], combined_entities))
+    regex = re.compile("(%s)(\s\S+){0,3}\s%s" % (p[1], combined_entities))
 
 
 
@@ -232,12 +241,12 @@ for o, a in opts:
 print("Loading dicts:")
 positives = load_dict("dict/positives.tsv")
 #combined_positives = "(%s)" % "|".join(positives)
-combined_positives = "(POSITIVE)"
+combined_positives = "+"
 print("\t%s positives terms loaded" % len(positives))
 
 negatives = load_dict("dict/negatives.tsv")
 #combined_negatives = "(%s)" % "|".join(negatives)
-combined_negatives = "(NEGATIVE)"
+combined_negatives = "-"
 print("\t%s negatives terms loaded" % len(negatives))
 
 entities = load_dict("dict/entities.tsv")
