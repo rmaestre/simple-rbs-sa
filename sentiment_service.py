@@ -10,7 +10,7 @@ import ply.yacc as yacc
 from sa_lex import tokens
 from treetagger import TreeTagger
 from treetagger_wordnet import TreetaggerToWordnet
-from sentiwordnet_treetagger import SentiwordnetToTreetagger
+from sentiwordnet import SentiWordnet
 
 class MainHandler(tornado.web.RequestHandler):
     """ """
@@ -22,7 +22,7 @@ class MainHandler(tornado.web.RequestHandler):
         self.language = language
         self.tt = TreeTagger(encoding='latin-1', language=language)
         self.to_wordnet = TreetaggerToWordnet()
-        self.to_sentiwordnet = SentiwordnetToTreetagger()
+        self.sentiwordnet = SentiWordnet()
 
     def get(self):
         """ """
@@ -61,27 +61,31 @@ class MainHandler(tornado.web.RequestHandler):
                 aux += "%s " % chunk
         text = aux
 
+        # Detecting Words with sentiment (Sentiwordnet)
         aux = ""
         chunks = text.split(" ")
         for chunk in chunks:
             aux += chunk
             sub_chunks = chunk.split(".")
             if len(sub_chunks) > 1:
-                senti = self.to_sentiwordnet.get_sentiment(sub_chunks[0], sub_chunks[1], language)
-                positive = 0.0
-                negative = 0.0
+
+                # Apply sentiwordnet dictionary
+                senti = self.sentiwordnet.get_sentiment(sub_chunks[0], 
+                            sub_chunks[1], 
+                            language)
+
+                # Calculate score
+                score = 0.0
                 if senti is not None:
-                    positive = float(senti["positive"])
-                    negative = float(senti["negative"])
-                if positive != 0:
-                    aux += "+%s" % (positive)
-                if negative != 0:
-                    aux += "-%s" % (negative)
+                    score = float(senti["positive"]) + float(senti["negative"])
+                if score < 0.0:
+                    aux += " NEGATIVE %s" % score
+                elif score > 0.0:
+                    aux += " POSITIVE %s" % score
+            # Return keyword
             aux += " "
         text = aux
-
         response["text"] = text
-
 
         # Split input text
         chunks = text.split('#.None')
@@ -89,6 +93,7 @@ class MainHandler(tornado.web.RequestHandler):
         response["matches"] = {}
 
         for chunk in chunks:
+            chunk =' '.join(chunk.split())
 
             # Apply rules and replace matchs
             rule_triggered = False
@@ -226,11 +231,13 @@ for o, a in opts:
 # Load dicts into global variables
 print("Loading dicts:")
 positives = load_dict("dict/positives.tsv")
-combined_positives = "(%s)" % "|".join(positives)
+#combined_positives = "(%s)" % "|".join(positives)
+combined_positives = "(POSITIVE)"
 print("\t%s positives terms loaded" % len(positives))
 
 negatives = load_dict("dict/negatives.tsv")
-combined_negatives = "(%s)" % "|".join(negatives)
+#combined_negatives = "(%s)" % "|".join(negatives)
+combined_negatives = "(NEGATIVE)"
 print("\t%s negatives terms loaded" % len(negatives))
 
 entities = load_dict("dict/entities.tsv")
