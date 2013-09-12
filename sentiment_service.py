@@ -11,19 +11,20 @@ from sa_lex import tokens
 from treetagger import TreeTagger
 from treetagger_wordnet import TreetaggerToWordnet
 from sentiwordnet import SentiWordnet
-import math 
+import csv
 
 class MainHandler(tornado.web.RequestHandler):
     """ """
 
-    def initialize(self, rules, chunks, language):
+    def initialize(self, to_wordnet, sentiwordnet, tt, rules, stopwords, chunks, language):
         """ """
         self.rules = rules
         self.chunks = chunks
         self.language = language
-        self.tt = TreeTagger(encoding='latin-1', language=language)
-        self.to_wordnet = TreetaggerToWordnet()
-        self.sentiwordnet = SentiWordnet()
+        self.stopwords = stopwords
+        self.sentiwordnet = sentiwordnet
+        self.tt = tt
+        self.to_wordnet = to_wordnet
 
     def get(self):
         """ """
@@ -50,6 +51,10 @@ class MainHandler(tornado.web.RequestHandler):
                 lemma = tag[0]
             aux += "%s.%s " % (lemma, self.to_wordnet.wordnet_morph_category(self.language, tag[1]))
         text = aux
+
+        # Replace stopwords for the entities
+        for stopword in self.stopwords:
+            text = text.replace(stopword, " ")
 
         # Replace postagging for the entities
         aux = ""
@@ -149,6 +154,7 @@ def p_rule(p):
     compiled_rules[rule_id] = {}
     compiled_rules[rule_id]["regex"] = regex
     compiled_rules[rule_id]["score"] = float(p[4])
+    #print(regex.pattern)
 
 
 def p_expresion_simple_one(p):
@@ -163,9 +169,9 @@ def p_expresion_simple_two(p):
     'expression : ENTITY QUALIFICATOR'
     global regex
     if p[2] == "+":
-        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_entities, combined_positives))
+        regex = re.compile("%s(\s\S+){0,3}\s(\w+\.\w(\%s)(\d+.\d+)+)" % (combined_entities, combined_positives))
     else:
-        regex = re.compile("%s(\s\S+){0,3}\s%s" % (combined_entities, combined_negatives))
+        regex = re.compile("%s(\s\S+){0,3}\s(\w+\.\w(\%s)(\d+.\d+)+)" % (combined_entities, combined_negatives))
 
 def p_expresion_simple_swaping_one(p):
     'expression : SWAP QUALIFICATOR ENTITY'
@@ -202,15 +208,15 @@ def p_error(p):
     print "Syntax error in input!"
     sys.exit(0)
 
-def load_dict(file):
+def load_dict(file_path):
     """
     Load files from disk into variables
     """
     aux = []
-    for line in open(file, "r"):
-        line = line.replace("\r\n", "")
-        line = line.replace("\n", "")
-        aux.append(line)
+    f_in = open(file_path, "r")
+    tsv_reader = csv.reader(f_in, delimiter='\t')
+    for row in tsv_reader:
+        aux.append(row[0])
     return aux
 
 
@@ -238,21 +244,22 @@ for o, a in opts:
 
 
 # Load dicts into global variables
-print("Loading dicts:")
-positives = load_dict("dict/positives.tsv")
-#combined_positives = "(%s)" % "|".join(positives)
-combined_positives = "+"
-print("\t%s positives terms loaded" % len(positives))
+print("Loading Negative and positive constants:")
+positive = load_dict("dict/positive.tsv")
+assert(len(positive) == 1)
+combined_positives = positive[0]
+negative = load_dict("dict/negative.tsv")
+combined_negatives = negative[0]
+assert(len(negative) == 1)
+print("...loaded.")
+print("\n")
 
-negatives = load_dict("dict/negatives.tsv")
-#combined_negatives = "(%s)" % "|".join(negatives)
-combined_negatives = "-"
-print("\t%s negatives terms loaded" % len(negatives))
+
+print("Loading dicts:")
 
 entities = load_dict("dict/entities.tsv")
 combined_entities = "(%s)" % "|".join(entities)
 print("\t%s entities terms loaded" % len(entities))
-
 
 inverters = load_dict("dict/inverters.tsv")
 combined_inverters = "(%s)" % "|".join(inverters)
@@ -260,6 +267,9 @@ print("\t%s inverters terms loaded" % len(inverters))
 
 chunks = load_dict("dict/chunks.tsv")
 print("\t%s chunks loaded" % len(chunks))
+
+stopwords = load_dict("data/stopwords.tsv")
+print("\t%s stopwords loaded" % len(stopwords))
 
 # Read the rules from the file
 rules = []
@@ -276,10 +286,13 @@ for rule in rules:
     print("\tRule parsed succesfully: %s" % rule)
 
 
+tt = TreeTagger(encoding='latin-1', language=language)
+sentiwordnet = SentiWordnet()
+to_wordnet = TreetaggerToWordnet()
 
 # Init Tornado web server
 application = tornado.web.Application([
-    (r"/", MainHandler, dict(rules = compiled_rules, chunks = chunks, language = language)),
+    (r"/", MainHandler, dict(rules = compiled_rules, to_wordnet = to_wordnet, sentiwordnet = sentiwordnet, tt = tt, stopwords = stopwords, chunks = chunks, language = language)),
 ])
 
 # Listen on specific port and start server
