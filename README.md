@@ -19,48 +19,49 @@ A simple execution of the whole system, loading dicts and rules, parsing the rul
 ```
 host$ python sentiment_service.py -l spanish -p 8080
 Loading dicts:
-	5 positives terms loaded
-	4 negatives terms loaded
+	0 positives terms loaded
+	0 negatives terms loaded
 	3 entities terms loaded
 	1 inverters terms loaded
-	5 chunks loaded
+	6 chunks loaded
 
-Loading RULES:
-	Rule parsed succesfully: #1 NOT + ENTITY > -0.3 ;
-	Rule parsed succesfully: #2 ENTITY NOT + > -0.3 ;
-	Rule parsed succesfully: #3 NOT - ENTITY > 0.3 ;
-	Rule parsed succesfully: #4 ENTITY NOT - > 0.3 ;
-	Rule parsed succesfully: #5 + ENTITY > 0.3 ;
-	Rule parsed succesfully: #6 ENTITY + > 0.3 ;
-	Rule parsed succesfully: #7 - ENTITY > -0.3 ;
-	Rule parsed succesfully: #8 ENTITY - > -0.3 ;
-	Rule parsed succesfully: #9 ENTITY penoso.adj > -0.4;
-	Rule parsed succesfully: #10 ENTITY competitivo.adj > 0.4;
-	Rule parsed succesfully: #11 lento.adj ENTITY > -0.4;
+Loading rules:
+	Rule parsed succesfully: #1 slow.a ENTITY > -0.9;
+	Rule parsed succesfully: #2 ENTITY slow.a > -0.9;
+	Rule parsed succesfully: #3 amazing.a ENTITY > 0.9;
+	Rule parsed succesfully: #4 ENTITY amazing.a > 0.9;
+	Rule parsed succesfully: #10 NOT + ENTITY > -0.3 ;
+	Rule parsed succesfully: #11 ENTITY NOT + > -0.3 ;
+	Rule parsed succesfully: #12 NOT - ENTITY > 0.3 ;
+	Rule parsed succesfully: #13 ENTITY NOT - > 0.3 ;
+	Rule parsed succesfully: #14 + ENTITY > 0.3 ;
+	Rule parsed succesfully: #15 ENTITY + > 0.3 ;
+	Rule parsed succesfully: #16 - ENTITY > -0.3 ;
+	Rule parsed succesfully: #17 ENTITY - > -0.3 ;
 
 
 Response:
 {
 	matches: {
 		0: {
-			rule_triggered: "#2",
+			rule_triggered: 10,
 			score: -0.3,
-			match: "vodafone no yo.None gustar.verb"
+			match: "not love.v+0.5 movistar"
 		},
 		1: {
-			rule_triggered: "#6",
-			score: 0.3,
-			match: "movistar ser.None bueno.adj"
+			rule_triggered: 4,
+			score: 0.9,
+			match: "orange an.None amazing.a"
 		},
 		2: {
-			rule_triggered: "#10",
-			score: 0.4,
-			match: "vodafone ser.None muy.adv competitivo.adj"
+			rule_triggered: 1,
+			score: -0.9,
+			match: "slow.a connection.n-0.125 of.None vodafone"
 		}
 	},
-	text: "movistar ser.None bueno.adj aunque.None vodafone no yo.None gustar.verb #.None #.None vodafone ser.None muy.adv competitivo.adj ",
-	raw_text: "movistar es bueno aunque vodafone no me gusta, pero vodafone es muy competitivo",
-	elipsed_time: 0.10001611709594727
+	text: "i.n do.v not love.v+0.5 movistar #.None orange an.None amazing.a+0.25 company.n #.None BTW.r #.None #.None #.None i.None hate.v-0.75 the.None slow.a connection.n-0.125 of.None vodafone ",
+	raw_text: "i do not love movistar but orange an amazing company. BTW ... i hate the slow connection of vodafone",
+	elipsed_time: 0.25530195236206055
 }
 
 ```
